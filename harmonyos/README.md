@@ -18,6 +18,8 @@ HTTP 仅用于受信任的同一局域网；仅接受用户明确填写的 RFC19
 
 ## 在 DevEco 中构建和检查
 
+本轮环境检查和可继续操作见 [工具链检查记录](../docs/verification/2026-10-15-tablet-toolchain.md)。建议在官方下载中心选择 **DevEco Studio 6.0.0 Release / Command Line 6.0.0.878**，对应 API 20；不要直接用下载页默认的新版本替换工程目标。若下载页面要求登录或确认协议，由用户在官方页面完成。
+
 1. 从 [华为官方下载入口](https://developer.huawei.com/consumer/cn/deveco-studio/)安装支持 HarmonyOS 6 / API 20 的 DevEco Studio 与 SDK，打开本目录。
 2. 先进行同步和未签名构建，记录完整编译输出。当前未运行这一关；若本机 DevEco 模型版本与工程配置不兼容，应基于真实错误修正配置，不直接声称兼容。
 3. 在 Project Structure → Signing Configs 中为用户自己的调试设备配置签名。仓库不含证书、私钥、密码或设备绑定文件；不要提交这些文件。

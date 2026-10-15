@@ -63,3 +63,9 @@ DevEco 编译/签名与权限验证：NOT RUN。
 整体仍PARTIAL。独立包为ZIP+安装脚本，不是单文件EXE；未在干净虚拟机或其他Windows机器验收，runtime/稳定启动器不由代码包自更新。未发布Release、合并PR、写真实开始菜单、改变防火墙或常驻部署。
 
 2026-10-16再次定向检查：命令行未发现hdc/hvigor/hvigorw，卸载注册表未定位DevEco，DEVECO_SDK_HOME/HOS_SDK_HOME为空；这不排除其他未登记位置。鸿蒙SDK编译、签名、HAP、真机和系统球直接drop仍NOT RUN/BLOCKED。下一步是原生工具链、签名与设备授权，不能由电脑端通过推导完整双端通过。
+
+## 继续平板端：工具链下载前置条件
+
+继续核对官方 API20 工具：DevEco / Command Line 6.0.0.878 为匹配版本。官方下载中心服务要求会话 CSRF；本轮只读取公开页面和元数据接口错误，没有取得工具包、安装开发工具或代签协议。官方新 CLI 的说明仍依赖另备工具链，因此未引入。
+
+下一步需要用户在官方页面完成实际要求的下载操作，将 Windows x64 的 API20 配套工具包解压后告知路径；建议 D:\Share-development\toolchain。随后从真实未签名构建开始，不能跳过编译关直接宣称可安装。详见 verification/2026-10-15-tablet-toolchain.md。已整理源码快照供 DevEco 打开；源码 ZIP 不是 HAP。
