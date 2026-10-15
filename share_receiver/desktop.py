@@ -52,6 +52,7 @@ class Desktop:
         menu = tk.Menu(root, tearoff=False)
         menu.add_command(label='接收记录与设置', command=self.show_panel)
         menu.add_command(label='打开接收文件夹', command=self.open_folder)
+        menu.add_command(label='检查应用更新', command=self.show_updates)
         menu.add_separator()
         menu.add_command(label='退出 Share', command=self.close)
         self.canvas.bind('<Button-3>', lambda event: menu.tk_popup(event.x_root, event.y_root))
@@ -120,7 +121,16 @@ class Desktop:
         self.history.pack(fill='both', expand=True)
         for line in self.recent:
             self.history.insert('end', line)
+        ttk.Button(frame, text='检查应用更新', command=self.show_updates).pack(anchor='w', pady=(8, 0))
         ttk.Button(frame, text='退出并停止接收', command=self.close).pack(anchor='e', pady=(12, 0))
+
+    def show_updates(self):
+        from .update_ui import UpdateWindow
+        if getattr(self, "update_window", None) is not None and self.update_window.window.winfo_exists():
+            self.update_window.window.deiconify()
+            self.update_window.window.lift()
+            return
+        self.update_window = UpdateWindow(self)
 
     def copy_token(self):
         self.root.clipboard_clear()

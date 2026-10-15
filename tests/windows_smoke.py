@@ -42,6 +42,18 @@ def main():
             app.show_panel()
             root.update()
             assert app.unread == 0
+            app.show_updates()
+            root.update()
+            update = app.update_window
+            assert update.window.winfo_exists()
+            assert update.install is None
+            update.events.put(('error', 'simulated offline'))
+            update.poll()
+            assert 'simulated offline' in update.status.get()
+            update.window.withdraw()
+            app.show_updates()
+            root.update()
+            assert update.window.state() == 'normal'
         finally:
             root.destroy()
             server.shutdown()

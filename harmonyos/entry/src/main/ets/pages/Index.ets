@@ -6,6 +6,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { NativeSender } from '../common/NativeSender';
 import { systemBall } from '../common/SystemBall';
 import { localFileUris } from '../common/DropFiles';
+import { checkStoreUpdate } from '../common/StoreUpdates';
 import { receiverUrl } from '../common/Protocol';
 
 interface Connection {
@@ -23,6 +24,8 @@ struct Index {
   @State busy: boolean = false;
   @State loading: boolean = true;
   @State ballBusy: boolean = false;
+  @State updateBusy: boolean = false;
+  @State updateStatus: string = '版本 0.1.0 · 开发版本';
   @State history: string[] = [];
   private store: preferences.Preferences | undefined = undefined;
   private sender: NativeSender = new NativeSender();
@@ -174,6 +177,18 @@ struct Index {
     }
   }
 
+  private async checkUpdate(): Promise<void> {
+    if (this.updateBusy || this.busy) { return; }
+    this.updateBusy = true;
+    try {
+      this.updateStatus = await checkStoreUpdate(this.context());
+    } catch (error) {
+      this.updateStatus = `检查更新失败：${this.errorText(error as BusinessError)}`;
+    } finally {
+      this.updateBusy = false;
+    }
+  }
+
   build() {
     Scroll() {
       Column({ space: 16 }) {
@@ -203,6 +218,10 @@ struct Index {
         Text(this.ballStatus).width('100%')
         Text('点击系统球返回上传页。当前尚未验证直接把文件拖到系统球上的能力。')
           .fontSize(13).fontColor('#566174').width('100%')
+        Divider()
+        Button('检查应用更新').enabled(!this.updateBusy && !this.busy)
+          .onClick(() => { this.checkUpdate(); })
+        Text(this.updateStatus).fontSize(13).fontColor('#566174').width('100%')
         Divider()
         Text('最近发送').fontSize(20).fontWeight(FontWeight.Bold).width('100%')
         ForEach(this.history, (line: string) => {

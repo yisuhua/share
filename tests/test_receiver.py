@@ -66,6 +66,60 @@ class ReceiverTests(unittest.TestCase):
                 self.assertEqual(self.request(name=name)[0], 400)
         self.assertFalse((self.root / 'oops').exists())
 
+    def test_early_rejection_handles_delayed_small_body(self):
+        c = http.client.HTTPConnection(*self.server.server_address, timeout=3)
+        try:
+            c.putrequest('POST', '/v1/files?name=C%3Aabc')
+            c.putheader('Authorization', 'Bearer ' + self.settings.token)
+            c.putheader('Content-Length', '3')
+            c.endheaders()
+            time.sleep(.02)
+            c.send(b'abc')
+            response = c.getresponse()
+            self.assertEqual(response.status, 400)
+            self.assertIn('error', json.loads(response.read()))
+        finally: c.close()
+        self.assertEqual(list(self.settings.folder.iterdir()), [])
+
+    def test_early_rejection_does_not_wait_for_large_or_missing_body(self):
+        for size in ('1000000000', '3'):
+            c = http.client.HTTPConnection(*self.server.server_address, timeout=2)
+            try:
+                c.putrequest('POST', '/v1/files?name=C%3Aabc')
+                c.putheader('Authorization', 'Bearer ' + self.settings.token)
+                c.putheader('Content-Length', size)
+                c.endheaders()
+                before = time.monotonic()
+                response = c.getresponse()
+                self.assertEqual(response.status, 400)
+                response.read()
+                self.assertLess(time.monotonic() - before, 1.5)
+            finally: c.close()
+
+    def test_early_rejection_has_total_deadline_for_slow_body(self):
+        c = http.client.HTTPConnection(*self.server.server_address, timeout=2)
+        stop = threading.Event()
+        c.putrequest('POST', '/v1/files?name=C%3Aabc')
+        c.putheader('Authorization', 'Bearer ' + self.settings.token)
+        c.putheader('Content-Length', '8192')
+        c.endheaders()
+        def trickle():
+            while not stop.wait(.08):
+                try: c.send(b'x')
+                except OSError: break
+        sender = threading.Thread(target=trickle)
+        sender.start()
+        before = time.monotonic()
+        try:
+            response = c.getresponse()
+            self.assertEqual(response.status, 400)
+            response.read()
+            self.assertLess(time.monotonic() - before, .8)
+        finally:
+            stop.set()
+            sender.join(2)
+            c.close()
+
     def test_parallel_same_names_never_overwrite(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
             results = list(pool.map(lambda i: self.request(name='same.txt', data=str(i).encode()), range(4)))

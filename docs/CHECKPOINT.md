@@ -37,3 +37,15 @@ DevEco 编译/签名与权限验证：NOT RUN。
 独立代码审查发现并修正：异步读取旧配置可能覆盖当前目标电脑；现已在读取期间禁用输入/动作，并对每次操作固定连接快照，预检查、持久化和整个批次使用同一地址/密码。失败上传的缓存清理警告原本会被主错误覆盖，现已合并到最终错误中。临时目录改用实际创建成功才返回的mkdtemp。审查者已针对修改回看，未发现剩余具体缺陷；此结论仅为源代码审查，不是原生运行验证。
 
 验收清单：TABLET_ACCEPTANCE.md；API来源：API_SOURCES.md；独立证据记录：verification/2026-10-15-native-stage.md。
+
+## 本轮续跑：应用内更新
+
+用户已选择应用内更新。电脑端新增首次用户级安装、稳定启动器、GitHub 正式版查询、SHA-256 下载校验、严格 ZIP/每文件校验、版本暂存、空闲门禁、重启就绪握手和旧版本回退；保留配置、配对密码与接收文件。单实例 OS 文件锁避免重复打开误回退。源码模式只检查，不更新工作区。首次安装与更新 ZIP 可用 tools/package_windows.py 重建，仍依赖 Python 3.11+，不是独立 EXE。
+
+本地 Python 34/34、Node 纯协议3/3、compileall、diff --check 通过。Windows Python 3.13.14 最终34/34通过，managed安装/更新UI smoke通过；同轮 Tk smoke、真实curl 0及2,097,155字节通过。Windows路径：C:\Users\Lenovo\AppData\Local\Temp\Share-update-verified-20261015-1l6ih2i3。详见verification/2026-10-15-update-stage.md。
+
+独立审查的问题已修复并回归：普通启动失败不回退；坏版导入阻断回退；固定5秒存活误判就绪；相对配置路径漂移；重复启动误回退；中文快捷入口编码；小请求体拒绝引发Windows TCP reset。补读小请求体采用绝对250ms截止时间/read1，避免逐字节慢发无限延长。
+
+鸿蒙加入AppGalleryKit官方更新入口，但STORE_RELEASED=false；未上架开发版本明确提示不可更新。此处SDK编译、枚举/syscap核验、签名、应用市场更新真机仍NOT RUN。GitHub Release真实发布/线上升级整链路NOT RUN；没有发布Release、合并PR、修改防火墙、安装到用户正式目录或写入开始菜单。
+
+下一步：为原生端取得DevEco/API20、签名和真机验证环境；仍需验证系统球直接文件drop及USE_FLOAT_BALL授权。已验证的电脑更新层不等于完整双端目标通过。远程Git提交SHA与本地可能不同，以fetch后文件树一致为准。

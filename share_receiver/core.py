@@ -14,6 +14,7 @@ import shutil
 import socket
 import tempfile
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -99,23 +100,45 @@ class ReceiverServer(ThreadingHTTPServer):
     def __init__(self, address: tuple, settings: Settings):
         self.settings = settings
         self.slots = threading.BoundedSemaphore(8)
+        self.activity_lock = threading.Lock()
+        self.active = 0
+        self.paused = False
         super().__init__(address, Handler)
 
+    def try_pause_idle(self):
+        with self.activity_lock:
+            if self.active:
+                return False
+            self.paused = True
+            return True
+
+    def resume(self):
+        with self.activity_lock:
+            self.paused = False
+
     def process_request(self, request, client_address):
-        if not self.slots.acquire(blocking=False):
+        with self.activity_lock:
+            accepted = not self.paused and self.slots.acquire(blocking=False)
+            if accepted:
+                self.active += 1
+        if not accepted:
             self.shutdown_request(request)
             return
         try:
             super().process_request(request, client_address)
         except BaseException:
-            self.slots.release()
+            with self.activity_lock:
+                self.active -= 1
+                self.slots.release()
             raise
 
     def process_request_thread(self, request, client_address):
         try:
             super().process_request_thread(request, client_address)
         finally:
-            self.slots.release()
+            with self.activity_lock:
+                self.active -= 1
+                self.slots.release()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -130,16 +153,40 @@ class Handler(BaseHTTPRequestHandler):
 
     def reply(self, status: int, data: dict):
         payload = json.dumps(data, ensure_ascii=False).encode('utf-8')
-        self.send_response(status)
-        self.send_header('Content-Type', 'application/json; charset=utf-8')
-        self.send_header('Content-Length', str(len(payload)))
-        self.send_header('Cache-Control', 'no-store')
-        self.send_header('Connection', 'close')
-        self.end_headers()
+        # Closing a Windows socket with a delayed unread request body can reset
+        # the connection before the client receives the rejection. Drain only a
+        # small, unambiguous body with a strict time budget; never await large uploads.
+        if status >= 400 and getattr(self, 'unread_post_body', False):
+            lengths = self.headers.get_all('Content-Length', [])
+            if (not self.headers.get('Transfer-Encoding') and len(lengths) == 1
+                    and re.fullmatch(r'[0-9]{1,12}', lengths[0])
+                    and 0 < int(lengths[0]) <= 8192):
+                timeout = self.connection.gettimeout()
+                try:
+                    deadline = time.monotonic() + .25
+                    remaining = int(lengths[0])
+                    while remaining:
+                        budget = deadline - time.monotonic()
+                        if budget <= 0: break
+                        self.connection.settimeout(budget)
+                        block = self.rfile.read1(remaining)
+                        if not block: break
+                        remaining -= len(block)
+                except OSError:
+                    pass
+                finally:
+                    self.connection.settimeout(timeout)
+            self.unread_post_body = False
         self.close_connection = True
         try:
+            self.send_response(status)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(payload)))
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Connection', 'close')
+            self.end_headers()
             self.wfile.write(payload)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             LOG.warning('Client disconnected before receipt was delivered')
 
     def authorized(self) -> bool:
@@ -166,6 +213,7 @@ class Handler(BaseHTTPRequestHandler):
                          'receiver': socket.gethostname(), 'form_upload': True})
 
     def do_POST(self):
+        self.unread_post_body = True
         if not self.authorized():
             return
         url = urlsplit(self.path)
@@ -209,11 +257,12 @@ class Handler(BaseHTTPRequestHandler):
             folder = self.server.settings.folder
         temp = None
         try:
-            if form is not None:
-                form.begin()
             if shutil.disk_usage(folder).free < length + 16 * 1024 * 1024:
                 self.reply(507, {'error': '接收目录剩余空间不足'})
                 return
+            self.unread_post_body = False
+            if form is not None:
+                form.begin()
             fd, temp = tempfile.mkstemp(prefix='.share-', suffix='.part', dir=folder)
             checksum = hashlib.sha256()
             with os.fdopen(fd, 'wb') as out:

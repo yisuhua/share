@@ -11,3 +11,5 @@ build/
 *.p12
 *.p7b
 *.cer
+
+dist/
