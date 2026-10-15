@@ -98,6 +98,56 @@ class ReceiverTests(unittest.TestCase):
         s.close()
         self.assertEqual(list(self.settings.folder.iterdir()), [])
 
+    def form_request(self, data=b'abc', trailer=None, size=None, prefix=None):
+        boundary = 'native-boundary'
+        start = prefix or (b'--native-boundary\r\n'
+                           b'Content-Disposition: form-data; name="file"; filename="cache.tmp"\r\n'
+                           b'Content-Type: application/octet-stream\r\n\r\n')
+        tail = b'\r\n--native-boundary--\r\n' if trailer is None else trailer
+        c = http.client.HTTPConnection(*self.server.server_address, timeout=3)
+        c.request('POST', '/v1/form-files?name=' + quote('原图.png'), start + data + tail, {
+            'Authorization': 'Bearer ' + self.settings.token,
+            'Content-Type': 'multipart/form-data; boundary="' + boundary + '"',
+            'X-File-Size': str(len(data) if size is None else size),
+            'X-Content-SHA256': hashlib.sha256(data).hexdigest()})
+        response = c.getresponse()
+        result = response.status, json.loads(response.read())
+        c.close()
+        return result
+
+    def test_native_multipart_saves_original_bytes_and_query_filename(self):
+        data = b'\x00\xff\r\n--native-boundary\r\nbytes remain file content'
+        status, body = self.form_request(data)
+        self.assertEqual(status, 201)
+        self.assertEqual((self.settings.folder / '原图.png').read_bytes(), data)
+        self.assertEqual(body['bytes'], len(data))
+
+    def test_native_zero_byte_file(self):
+        self.assertEqual(self.form_request(b'')[0], 201)
+        self.assertEqual((self.settings.folder / '原图.png').read_bytes(), b'')
+
+    def test_native_missing_closing_boundary_leaves_no_file(self):
+        self.assertEqual(self.form_request(trailer=b'bad')[0], 400)
+        self.assertEqual(list(self.settings.folder.iterdir()), [])
+
+    def test_native_extra_part_is_rejected(self):
+        extra = b'\r\n--native-boundary\r\nContent-Disposition: form-data; name="other"\r\n\r\nx\r\n--native-boundary--\r\n'
+        self.assertEqual(self.form_request(trailer=extra)[0], 400)
+        self.assertEqual(list(self.settings.folder.iterdir()), [])
+
+    def test_native_false_file_size_is_rejected(self):
+        self.assertEqual(self.form_request(size=1)[0], 400)
+        self.assertEqual(list(self.settings.folder.iterdir()), [])
+
+    def test_native_exceeds_same_file_limit_as_raw(self):
+        self.assertEqual(self.form_request(b'x' * 1025)[0], 413)
+        self.assertEqual(list(self.settings.folder.iterdir()), [])
+
+    def test_native_wrong_form_field_is_rejected(self):
+        prefix = b'--native-boundary\r\nContent-Disposition: form-data; name="wrong"\r\n\r\n'
+        self.assertEqual(self.form_request(prefix=prefix)[0], 400)
+        self.assertEqual(list(self.settings.folder.iterdir()), [])
+
 
 if __name__ == '__main__':
     unittest.main()

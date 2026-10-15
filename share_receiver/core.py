@@ -18,6 +18,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from .form import FileForm, FormError
+
 LOG = logging.getLogger('share')
 
 
@@ -161,13 +163,13 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(404, {'error': '接口不存在'})
             return
         self.reply(200, {'protocol': 1, 'max_bytes': self.server.settings.max_bytes,
-                         'receiver': socket.gethostname()})
+                         'receiver': socket.gethostname(), 'form_upload': True})
 
     def do_POST(self):
         if not self.authorized():
             return
         url = urlsplit(self.path)
-        if url.path != '/v1/files':
+        if url.path not in ('/v1/files', '/v1/form-files'):
             self.reply(404, {'error': '接口不存在'})
             return
         names = parse_qs(url.query, keep_blank_values=True).get('name', [])
@@ -178,10 +180,27 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get('Transfer-Encoding') or len(lengths) != 1 or not re.fullmatch(r'[0-9]{1,12}', lengths[0]):
             self.reply(411, {'error': '必须提供唯一有效的 Content-Length，不接受 chunked'})
             return
-        length = int(lengths[0])
+        wire_length = int(lengths[0])
+        form = None
+        length = wire_length
+        if url.path == '/v1/form-files':
+            sizes = self.headers.get_all('X-File-Size', [])
+            if len(sizes) != 1 or not re.fullmatch(r'[0-9]{1,12}', sizes[0]):
+                self.reply(400, {'error': '必须提供唯一有效的 X-File-Size'})
+                return
+            length = int(sizes[0])
         if length > self.server.settings.max_bytes:
             self.reply(413, {'error': '文件超过大小限制'})
             return
+        if url.path == '/v1/form-files':
+            if not length < wire_length <= length + 8192:
+                self.reply(400, {'error': 'multipart 封装长度不合理'})
+                return
+            try:
+                form = FileForm(self.rfile, self.headers.get('Content-Type', ''), wire_length, length)
+            except FormError as error:
+                self.reply(400, {'error': str(error)})
+                return
         digest = self.headers.get('X-Content-SHA256', '').lower()
         if not re.fullmatch('[a-f0-9]{64}', digest):
             self.reply(400, {'error': '缺少有效 SHA-256'})
@@ -190,6 +209,8 @@ class Handler(BaseHTTPRequestHandler):
             folder = self.server.settings.folder
         temp = None
         try:
+            if form is not None:
+                form.begin()
             if shutil.disk_usage(folder).free < length + 16 * 1024 * 1024:
                 self.reply(507, {'error': '接收目录剩余空间不足'})
                 return
@@ -206,6 +227,8 @@ class Handler(BaseHTTPRequestHandler):
                     remaining -= len(block)
                 out.flush()
                 os.fsync(out.fileno())
+            if form is not None:
+                form.finish()
             if not hmac.compare_digest(checksum.hexdigest(), digest):
                 Path(temp).unlink(missing_ok=True)
                 self.reply(422, {'error': '完整性校验失败；未保存文件'})
@@ -234,7 +257,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.server.settings.notify(event)
             LOG.info('Received %r (%d bytes)', target.name, length)
             self.reply(201, {k: event[k] for k in ('name', 'bytes', 'sha256')})
-        except UploadFailure as exc:
+        except (UploadFailure, FormError) as exc:
             if temp is not None:
                 Path(temp).unlink(missing_ok=True)
             self.reply(400, {'error': str(exc)})

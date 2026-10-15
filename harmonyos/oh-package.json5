@@ -1,0 +1,8 @@
+{
+  "modelVersion": "6.0.0",
+  "name": "share",
+  "version": "0.1.0",
+  "description": "Native HarmonyOS sender for Share",
+  "dependencies": {},
+  "devDependencies": {}
+}
