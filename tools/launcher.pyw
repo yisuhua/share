@@ -136,7 +136,10 @@ def start(root, options, args):
         child = None
         try:
             with (root / 'startup.log').open('ab') as log:
-                child = subprocess.Popen([executable, '-m', 'share_receiver', *args],
+                # Explicit app directory supports isolated bundled Python ._pth files.
+                runner = "import runpy,sys;sys.path.insert(0,sys.argv.pop(1));runpy.run_module('share_receiver',run_name='__main__')"
+                child = subprocess.Popen([executable, '-B', '-c', runner,
+                    str(root / 'releases' / selected), *args],
                     cwd=root / 'releases' / selected,
                     env=dict(env, SHARE_READY_FILE=str(ready)), stdout=log, stderr=log)
             deadline = time.monotonic() + 60

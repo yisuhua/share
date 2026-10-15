@@ -79,7 +79,7 @@ class UpdateWindow:
             self.status.set('正在接收文件，请接收完成后再点“重启更新”。')
             return
         try:
-            subprocess.Popen([sys.executable, str(self.install / 'launcher.pyw'),
+            subprocess.Popen([sys.executable, '-B', str(self.install / 'launcher.pyw'),
                               '--wait-pid', str(os.getpid()), '--target', self.release.version,
                               '--', '--host', str(self.desktop.server.server_address[0]),
                               '--port', str(self.desktop.server.server_port),

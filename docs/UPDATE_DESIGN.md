@@ -32,3 +32,9 @@ AppGalleryKit官方checkAppUpdate后，在明确返回新版本时调用showUpda
 5. 鸿蒙网络/服务失败或未上架不等于最新版；未运行的原生路径不进入PASS。
 
 启动就绪上限60秒，等待期间不阻塞UI；若超时终止未就绪的子进程后尝试回退。启动完成后不监控后续运行崩溃。稳定启动器与Python运行时不由当前代码更新包更新。线上GitHub Release和原生设备路径仍待实测，不能以本地fixture通过替代。
+
+## 可选独立首次安装包
+
+沿用代码更新ZIP契约，新增Standalone-x64首次安装ZIP，附带已验证CPython3.13.14/Tk8.6，不改系统Python。runtime置于program/runtime，应用仍位于program/releases/<version>；精简Setup保留。
+
+首次安装先在同父目录完整暂存，校验runtime后原子改名；已有目录不覆盖。._pth隔离模块路径，所有正式入口使用-B，稳定启动器明确插入应用版本目录。runtime与稳定启动器仍不通过代码包更新。本包不是单文件EXE，电脑端通过不代表平板完成。

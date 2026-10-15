@@ -81,6 +81,7 @@ def main():
             with patch.object(ui.subprocess, 'Popen') as launch, patch.object(app, 'close') as close:
                 update.restart()
                 args = launch.call_args.args[0]
+                assert args[1] == '-B'
                 assert args[args.index('--config') + 1] == str(settings.config.resolve())
                 assert args[args.index('--target') + 1] == '0.1.1'
                 close.assert_called_once()

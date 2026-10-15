@@ -6,7 +6,9 @@
 
 ## Windows 启动
 
-安装带 Tk 的 Python 3.11 或更高版本后，双击 `start_windows.cmd`，或在项目目录运行：
+独立安装包 `Share-Windows-Standalone-0.1.0-x64.zip` 面向 Windows x64，附带应用专用的 Python/Tk 运行时。解压后双击 `install_windows.cmd`，无需预装 Python，也不会修改系统 Python。
+
+开发源码启动或精简 Setup 包仍需带 Tk 的 Python 3.11+，可双击 `start_windows.cmd`，或在项目目录运行：
 
 ```powershell
 py -3 -m share_receiver
@@ -41,7 +43,7 @@ py -3 tests/curl_interop.py
 
 ## 应用内更新
 
-电脑端首次解压 `Share-Windows-Setup-0.1.0.zip` 后，双击 `install_windows.cmd`，安装到当前用户目录。仍需已安装带 Tk 的 Python 3.11+；此包不是独立 EXE。安装后从开始菜单打开 Share，在接收面板或球的右键菜单选择“检查应用更新”。源码启动只允许检查，不会覆盖工作区。
+电脑端首次解压 `Share-Windows-Standalone-0.1.0-x64.zip` 后，双击 `install_windows.cmd`，安装到当前用户目录。独立包内含已隔离的 Python 3.13.14/Tk 8.6，后续运行及应用内更新不依赖系统 Python。精简的 `Share-Windows-Setup-0.1.0.zip` 仍要求已安装 Python；两种包都是 ZIP 加安装脚本，不是单文件 EXE。安装后从开始菜单打开 Share，在接收面板或球的右键菜单选择“检查应用更新”。源码启动只允许检查，不会覆盖工作区。
 
 发现正式版本后，点击“下载更新”。应用从 `yisuhua/share` 的 GitHub Releases 下载固定名称的更新包，校验 SHA-256 并暂存。点击“重启更新”前必须接收空闲；新版本报告服务与界面已就绪后完成启动。默认目录、配对密码和已接收文件保留。损坏包不切换，启动失败会尝试旧版本；重复打开不会触发版本切换。程序运行期间的后续崩溃不由启动器监控。
 
@@ -51,6 +53,11 @@ py -3 tests/curl_interop.py
 py -3 "$env:LOCALAPPDATA\Share\program\launcher.pyw" --rollback
 ```
 
-开发者修改 `share_receiver/version.py` 后运行 `py -3 tools/package_windows.py`，生成首次安装包及 `Share-Windows-<版本>.zip` 更新资产。正式 GitHub Release 标签必须为 `v<版本>`，上传同版本更新 ZIP，且 GitHub 资产信息含 SHA-256 digest；运行时和依赖变更不适用于当前仅更新 Python 程序的格式。本轮不发布 Release，线上检查/下载整链路尚未验收。
+开发者修改 `share_receiver/version.py` 后运行 `py -3 tools/package_windows.py`，生成精简首次安装包及 `Share-Windows-<版本>.zip` 更新资产。正式 GitHub Release 标签必须为 `v<版本>`，上传同版本更新 ZIP，且 GitHub 资产信息含 SHA-256 digest；运行时和依赖变更不适用于当前仅更新 Python 程序的格式。本轮不发布 Release，线上检查/下载整链路尚未验收。
 
 鸿蒙上传页已加入“检查应用更新”入口，使用 AppGalleryKit。当前未上架的开发版本显示更新不可用；待同包名、同签名正式版本上架并完成真机验证后启用。此入口没有改变当前无可安装 HAP 的状态。
+
+
+在 Windows x64 执行 `py -3 -B tools/package_windows.py --bundle-runtime` 可额外构建完整独立 ZIP 和 SHA256SUMS.txt。构建只复制 CPython 标准库、运行库和 Tk 所需文件，排除 site-packages、用户 customize、缓存与测试资源；随包保留原许可证并记录运行时逐文件哈希。首次安装完成后，运行时与稳定启动器保留，现有更新 ZIP 仍只更换应用程序代码。
+
+独立运行时使用 `._pth` 隔离模块搜索路径，所有正式启动入口禁用字节码缓存写入。请通过安装后的 Share 入口运行；不要直接修改或单独运行 runtime 内部文件。运行时或稳定启动器本身的升级不在当前应用代码更新格式内。

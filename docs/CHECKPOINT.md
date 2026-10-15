@@ -49,3 +49,17 @@ DevEco 编译/签名与权限验证：NOT RUN。
 鸿蒙加入AppGalleryKit官方更新入口，但STORE_RELEASED=false；未上架开发版本明确提示不可更新。此处SDK编译、枚举/syscap核验、签名、应用市场更新真机仍NOT RUN。GitHub Release真实发布/线上升级整链路NOT RUN；没有发布Release、合并PR、修改防火墙、安装到用户正式目录或写入开始菜单。
 
 下一步：为原生端取得DevEco/API20、签名和真机验证环境；仍需验证系统球直接文件drop及USE_FLOAT_BALL授权。已验证的电脑更新层不等于完整双端目标通过。远程Git提交SHA与本地可能不同，以fetch后文件树一致为准。
+
+## 2026-10-15 独立首次安装包；2026-10-16 恢复与同步
+
+新增可选Windows x64独立ZIP，附带本机已验证的CPython3.13.14/Tk8.6。运行时排除site-packages、用户customize、缓存与测试目录，保留许可证和逐文件哈希。._pth隔离模块路径，正式启动入口均传-B。首次安装完整暂存后原子改名，不覆盖现有安装；已有代码更新ZIP契约不变。
+
+上轮实际验证：本地及Windows各41项测试、Node纯协议3项、Tk/managed smoke、curl空文件及2,097,155字节通过。独立包实际GUI重启升级0.1.0→0.1.1后继续接收，故意启动失败0.1.2后恢复0.1.1；配置字节和runtime清单/哈希不变。最终独立集成测试exit0，75.57s。独立审查发现UI重启漏-B，已红→绿修复；测试提前终止进程的竞态及导入拼接错误均已修正后重跑通过。
+
+已交付到电脑（未正式安装）：C:\Users\Lenovo\Downloads\Share-builds\Share-Windows-Standalone-0.1.0-x64-7789a9ed.zip，13,846,052字节；SHA256=7789a9ed0f51555eddb7ddf3c49eff62fe6cf7b012ec6e60bee99942890f0561。旁附.sha256。
+
+本次恢复：临时开发目录已被清理；从GitHub分支5f41f61和Windows构建目录恢复10个源码/测试/README文件，未更改其逻辑。实时核对交付ZIP哈希仍一致；恢复后本地41/41通过，本次Windows重新回归41/41通过，22.196s，exit0；Node纯协议3/3、compileall与diff检查通过。后续以Git仓库和该记录续跑，避免依赖临时目录。
+
+整体仍PARTIAL。独立包为ZIP+安装脚本，不是单文件EXE；未在干净虚拟机或其他Windows机器验收，runtime/稳定启动器不由代码包自更新。未发布Release、合并PR、写真实开始菜单、改变防火墙或常驻部署。
+
+2026-10-16再次定向检查：命令行未发现hdc/hvigor/hvigorw，卸载注册表未定位DevEco，DEVECO_SDK_HOME/HOS_SDK_HOME为空；这不排除其他未登记位置。鸿蒙SDK编译、签名、HAP、真机和系统球直接drop仍NOT RUN/BLOCKED。下一步是原生工具链、签名与设备授权，不能由电脑端通过推导完整双端通过。

@@ -24,3 +24,7 @@
 
 - [GitHub Releases REST API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)：稳定版查询及资产大小、下载地址、`digest`；[资产哈希公告](https://github.blog/changelog/2025-06-03-releases-now-expose-digests-for-release-assets/) 说明自动 SHA-256。使用标准 TLS 校验，不接受无 digest 的更新。
 - [华为应用市场更新功能](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/store-update)：本次搜索索引返回完整官方正文，更新时间2026-09-09；支持 `checkAppUpdate` / `showUpdateDialog`，要求已上架、真机及一致签名。网页直接获取仍超时。枚举与 syscap 须在 API20 SDK 编译及设备验收中进一步核实；未因此标记 ArkTS 编译 PASS。
+
+## Windows 独立运行时
+
+2026-10-15读取 [CPython3.13 Windows官方说明](https://docs.python.org/3.13/using/windows.html)：附带应用专用解释器时可用._pth隔离模块搜索路径；官方embeddable包不含Tk。本项目复制本机已验证的标准CPython3.13.14/Tk组件，保留许可证及哈希，排除第三方包与用户customize。不自动升级为最新Python。._pth不禁止字节码写入，因此正式启动链显式使用-B；真实Windows下核对路径、Tk/SSL、上传与更新，不以静态检查冒充独立运行。
