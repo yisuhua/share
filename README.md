@@ -23,8 +23,11 @@ py -3 -m share_receiver
 ```powershell
 py -3 -m unittest discover -s tests -v
 py -3 -m compileall -q share_receiver
+py -3 tests/windows_smoke.py
 ```
 
 无界面接收：`py -3 -m share_receiver --headless`。
+
+本轮已在 Windows Python 3.13.14 通过 9 项接收测试及 Tk 状态/生命周期 smoke check；平板真实跨应用悬浮、拖入文件和双端联调仍未执行。
 
 参见 [设计与能力边界](docs/DESIGN.md)、[协议](docs/PROTOCOL.md) 和 [续跑状态](docs/CHECKPOINT.md)。
