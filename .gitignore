@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+settings.json
+*.part
+received/
+.hvigor/
+oh_modules/
+local.properties
+build/
+*.p12
+*.p7b
+*.cer
+
+dist/

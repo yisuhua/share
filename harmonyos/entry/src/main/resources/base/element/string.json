@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "app_name", "value": "Share" },
+    { "name": "module_desc", "value": "将图片与文件发送到局域网电脑" },
+    { "name": "float_reason", "value": "在其他应用中提供返回 Share 上传页的入口" }
+  ]
+}
